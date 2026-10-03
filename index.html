@@ -186,7 +186,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" 
+                    <button type="submit" id="btn-login-submit"
                             class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-xl shadow-lg shadow-emerald-600/30 hover:shadow-emerald-600/40 transition text-sm flex items-center justify-center gap-2 mt-2 cursor-pointer">
                         <i class="fa-solid fa-arrow-right-to-bracket"></i>
                         <span>Login to Portal</span>
@@ -236,7 +236,7 @@
                                     <span>Student List</span>
                                 </button>
 
-                                <!-- Student Entry: Controlled 100% by Super Admin -->
+                                <!-- Student Entry: Controlled 100% by Super Admin Permissions -->
                                 <button onclick="switchCPSCLSubSection('entry')" id="menu-cpscl-entry" style="display: none;" class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer">
                                     <i class="fa-solid fa-user-plus text-xs"></i>
                                     <span>Student Entry</span>
@@ -302,7 +302,7 @@
                         </div>
                     </div>
 
-                    <!-- PROFILE DROPDOWN (100% Matching Emerald Theme) -->
+                    <!-- PROFILE DROPDOWN (100% Emerald Green Matching Theme) -->
                     <div class="relative">
                         <div id="profile-btn" class="flex items-center gap-1.5 cursor-pointer select-none group">
                             <div class="w-9 h-9 rounded-full ring-2 ring-emerald-500/30 dark:ring-emerald-400/40 p-0.5 shadow-xs overflow-hidden flex items-center justify-center">
@@ -312,7 +312,6 @@
                         </div>
 
                         <div id="profile-dropdown" class="hidden absolute right-0 top-12 w-72 bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50">
-                            <!-- 🎨 হেডার কালার এখন পুরোপুরি সবুজ-টিয়াল থিম -->
                             <div class="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-4 flex items-center gap-3 text-white">
                                 <div class="w-12 h-12 rounded-full border-2 border-white/90 overflow-hidden shadow-sm shrink-0">
                                     <img id="dropdown-profile-pic" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="Profile Photo" class="w-full h-full object-cover">
@@ -359,7 +358,7 @@
             <div id="main-content-area" class="flex-1 p-6 overflow-y-auto bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
                 <div id="cpscl-main-wrapper" class="space-y-5">
                     
-                    <!-- 🏠 DASHBOARD VIEW (হুবহু ছবি ২ এর আসল প্রাতিষ্ঠানিক ডিজাইন) -->
+                    <!-- 🏠 DASHBOARD VIEW (হুবহু ছবি ২ এর প্রাতিষ্ঠানিক ডিজাইন) -->
                     <div id="cpscl-dashboard-view" class="space-y-6 max-w-7xl mx-auto">
                         
                         <!-- প্রাতিষ্ঠানিক সাদা হেডার কার্ড (Exact Image 2) -->
@@ -582,7 +581,7 @@
                             </div>
 
                             <div class="flex justify-end gap-3 pt-4 border-t">
-                                <button type="button" onclick="switchCPSCLSubSection('dashboard')" class="bg-slate-600 text-white font-bold px-5 py-2.5 rounded-xl text-xs">Back</button>
+                                <button type="button" onclick="switchCPSCLSubSection('dashboard')" class="bg-slate-600 text-white font-bold px-5 py-2.5 rounded-xl text-xs cursor-pointer">Back to Dashboard</button>
                                 <button type="submit" class="bg-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl text-xs">Generate</button>
                             </div>
                         </form>
@@ -735,30 +734,14 @@
 
     <!-- ================= JAVASCRIPT & CLOUD RBAC SECURITY ================= -->
     <script>
-        let studentDatabase = JSON.parse(localStorage.getItem('cpscl_students_data') || '[]');
+        let studentDatabase = [];
         let currentFilterTemplate = 'all';
 
-        const DEFAULT_FALLBACK_USERS = [
-            {
-                id: 'usr_cpscl_default',
-                name: 'cpscl',
-                nameEn: 'Md. Rabbi Hosen',
-                empId: '1013',
-                designation: 'Office Assistant',
-                role: 'CPSCL Operator',
-                email: 'cpscl@gmail.com',
-                password: 'cpscl',
-                status: 'Active',
-                permissions: { cpscl_student_list: true, cpscl_cert_print: true, cpscl_excel_upload: false, cpscl_manual_entry: false, cpscl_delete_data: false }
-            }
-        ];
-
-        let systemUsersList = JSON.parse(localStorage.getItem('cpscl_system_users') || JSON.stringify(DEFAULT_FALLBACK_USERS));
-        let loggedInSessionUser = JSON.parse(localStorage.getItem('cpscl_auth_session') || 'null');
-
+        let authInstance = null;
         let dbInstance = null;
         let dbRefFunc = null;
         let dbSetFunc = null;
+        let onValueFunc = null;
 
         const TEMPLATE_NAMES = {
             'ssc_testimonial': 'SSC Testimonial',
@@ -829,43 +812,11 @@
             }
         }
 
-        // ================= ১. সরাসরি ফায়ারবেস ব্যাকআপ ফেচিং (অটো ডাটা লোডার) =================
-        async function fetchUsersDirectFromCloud() {
-            try {
-                const response = await fetch("https://mousumi-computer-default-rtdb.firebaseio.com/system/users.json");
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data) {
-                        systemUsersList = Array.isArray(data) ? data : Object.values(data);
-                        localStorage.setItem('cpscl_system_users', JSON.stringify(systemUsersList));
-                    }
-                }
-            } catch (e) {}
-        }
-
-        async function fetchStudentsDirectFromCloud() {
-            try {
-                const response = await fetch("https://mousumi-computer-default-rtdb.firebaseio.com/cpscl/students.json");
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data) {
-                        studentDatabase = Array.isArray(data) ? data : Object.values(data);
-                        localStorage.setItem('cpscl_students_data', JSON.stringify(studentDatabase));
-                        renderStudentTable();
-                        updateDashboardStats();
-                    }
-                }
-            } catch (e) {}
-        }
-
-        // ================= ২. ফায়ারবেস কানেকশন ও লাইভ সিঙ্ক =================
+        // ================= ১. ফায়ারবেস আসল অথেন্টিকেশন ও লাইভ সিঙ্ক =================
         async function initFirebaseSync() {
-            fetchUsersDirectFromCloud();
-            fetchStudentsDirectFromCloud();
-
             try {
                 const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
-                const { getAuth, signInWithEmailAndPassword, signInAnonymously } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+                const { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
                 const { getDatabase, ref, set, onValue } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
 
                 const firebaseConfig = {
@@ -882,109 +833,68 @@
                 const existingApps = getApps();
                 const app = existingApps.length > 0 ? existingApps[0] : initializeApp(firebaseConfig, "CPSCL_PORTAL_APP");
                 
-                const authInstance = getAuth(app);
+                authInstance = getAuth(app);
                 dbInstance = getDatabase(app);
                 dbRefFunc = ref;
                 dbSetFunc = set;
+                onValueFunc = onValue;
 
-                // অপারেটরের জন্য ফায়ারবেস অথেন্টিকেশন চ্যানেল
-                try {
-                    await signInWithEmailAndPassword(authInstance, "mousumicomputer.org@gmail.com", "cpscl1013");
-                } catch (authErr) {
-                    try { await signInAnonymously(authInstance); } catch (e) {}
-                }
-
-                // লাইভ ইউজার ভ্যালিডেশন এবং পারমিশন পর্যবেক্ষণ
-                const usersRef = ref(dbInstance, 'system/users');
-                onValue(usersRef, (snapshot) => {
-                    const cloudUsers = snapshot.val();
-                    if (cloudUsers) {
-                        systemUsersList = Array.isArray(cloudUsers) ? cloudUsers : Object.values(cloudUsers);
-                        localStorage.setItem('cpscl_system_users', JSON.stringify(systemUsersList));
-
-                        if (loggedInSessionUser) {
-                            const matchedUser = systemUsersList.find(u => 
-                                u.id === loggedInSessionUser.id || 
-                                u.name.toLowerCase() === loggedInSessionUser.name.toLowerCase() ||
-                                (u.email && u.email.toLowerCase() === loggedInSessionUser.email.toLowerCase())
-                            );
-                            
-                            if (matchedUser) {
-                                if (matchedUser.status !== 'Active') {
-                                    handleUserLogout("Your account is currently BLOCKED by administrator!");
-                                } else {
-                                    loggedInSessionUser = { ...matchedUser, isAdminImpersonating: loggedInSessionUser.isAdminImpersonating };
-                                    localStorage.setItem('cpscl_auth_session', JSON.stringify(loggedInSessionUser));
-                                    syncProfileDisplay();
-                                    applyUserPermissions();
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // লাইভ স্টুডেন্ট ডাটা লিসেনার
-                const studentsRef = ref(dbInstance, 'cpscl/students');
-                onValue(studentsRef, (snapshot) => {
-                    const cloudData = snapshot.val();
-                    if (cloudData) {
-                        studentDatabase = Array.isArray(cloudData) ? cloudData : Object.values(cloudData);
-                        localStorage.setItem('cpscl_students_data', JSON.stringify(studentDatabase));
-                        renderStudentTable();
-                        updateDashboardStats();
+                // লাইভ সেশন লিসেনার: ইউজার লগইন আছে কি নেই তা পরীক্ষা করে
+                onAuthStateChanged(authInstance, (user) => {
+                    if (user) {
+                        loginModal.classList.add('hidden');
+                        loginModal.classList.remove('flex');
+                        startRealtimeSync(user);
+                    } else {
+                        loginModal.classList.remove('hidden');
+                        loginModal.classList.add('flex');
                     }
                 });
 
             } catch (err) {
-                console.warn("Firebase Init Fallback:", err);
+                console.error("Firebase Auth Init Error:", err);
             }
         }
 
-        async function logCloudAudit(action, details) {
-            if (dbInstance && dbSetFunc && dbRefFunc) {
-                try {
-                    const { get, ref } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
-                    const logsRef = ref(dbInstance, 'system/audit_logs');
-                    const snapshot = await get(logsRef);
-                    let currentLogs = snapshot.val() || [];
-                    if (!Array.isArray(currentLogs)) currentLogs = Object.values(currentLogs);
-
-                    currentLogs.unshift({
-                        id: 'log_' + Date.now(),
-                        user: loggedInSessionUser ? `${loggedInSessionUser.name} (${loggedInSessionUser.role})` : 'Client User',
-                        action: action,
-                        details: details,
-                        timestamp: new Date().toLocaleString('en-US', { hour12: true })
-                    });
-
-                    if (currentLogs.length > 200) currentLogs.pop();
-                    await dbSetFunc(logsRef, currentLogs);
-                } catch(e) {}
-            }
-        }
-
-        async function syncToFirebase(newData) {
-            localStorage.setItem('cpscl_students_data', JSON.stringify(newData));
-            updateDashboardStats();
-            if (dbInstance && dbSetFunc && dbRefFunc) {
-                try {
-                    const studentsRef = dbRefFunc(dbInstance, 'cpscl/students');
-                    await dbSetFunc(studentsRef, newData);
-                } catch (e) {
-                    try {
-                        await fetch("https://mousumi-computer-default-rtdb.firebaseio.com/cpscl/students.json", {
-                            method: "PUT",
-                            body: JSON.stringify(newData)
-                        });
-                    } catch(err) {}
+        // লগইন সফল হওয়ার পর লাইভ ডাটা ও পারমিশন চালু করার ইঞ্জিন
+        function startRealtimeSync(authUser) {
+            // ১. লাইভ স্টুডেন্ট ডাটাবেজ পর্যবেক্ষণ (১৮১ জন ছাত্র সরাসরি লোড হবে)
+            const studentsRef = dbRefFunc(dbInstance, 'cpscl/students');
+            onValueFunc(studentsRef, (snapshot) => {
+                const cloudData = snapshot.val();
+                if (cloudData) {
+                    studentDatabase = Array.isArray(cloudData) ? cloudData : Object.values(cloudData);
+                    renderStudentTable();
+                    updateDashboardStats();
+                } else {
+                    studentDatabase = [];
+                    renderStudentTable();
+                    updateDashboardStats();
                 }
-            }
+            });
+
+            // ২. সুপার এডমিনের পারমিশন চেকবক্স লাইভ পর্যবেক্ষণ
+            const usersRef = dbRefFunc(dbInstance, 'system/users');
+            onValueFunc(usersRef, (snapshot) => {
+                const cloudUsers = snapshot.val();
+                if (cloudUsers) {
+                    const list = Array.isArray(cloudUsers) ? cloudUsers : Object.values(cloudUsers);
+                    const matched = list.find(u => 
+                        (u.email && u.email.toLowerCase() === authUser.email.toLowerCase()) || 
+                        u.name.toLowerCase() === 'cpscl' || 
+                        u.empId === '1013'
+                    );
+
+                    if (matched) {
+                        applyUserPermissions(matched);
+                        syncProfileDisplay(matched);
+                    }
+                }
+            });
         }
 
-        // ================= ৩. প্রোফাইল ও পারমিশন কন্ট্রোল =================
-        function syncProfileDisplay() {
-            if (!loggedInSessionUser) return;
-            const u = loggedInSessionUser;
+        // ================= ২. প্রোফাইল ও পারমিশন কন্ট্রোল =================
+        function syncProfileDisplay(u) {
             const avatar = u.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80';
 
             document.getElementById('nav-profile-pic').src = avatar;
@@ -1010,7 +920,7 @@
             const hscEl = document.getElementById('dash-hsc-count');
             const listTotalEl = document.getElementById('totalStudentsCount');
 
-            // ফায়ারবেসের রিয়েল ডাটার সত্য প্রতিফলন
+            // ফায়ারবেসের রিয়েল ছাত্র সংখ্যার লাইভ প্রতিফলন
             const total = studentDatabase.length;
             const ssc = studentDatabase.filter(s => s.template === 'ssc_testimonial' || !s.template).length;
             const hsc = studentDatabase.filter(s => s.template === 'hsc_testimonial').length;
@@ -1021,94 +931,70 @@
             if (listTotalEl) listTotalEl.innerText = total;
         }
 
-        function applyUserPermissions() {
-            if (!loggedInSessionUser) return;
-            const p = loggedInSessionUser.permissions || {};
-            const isSuperAdmin = loggedInSessionUser.role === 'Super Admin' || loggedInSessionUser.isAdminImpersonating;
+        // সুপার এডমিন admin.html-এ যে চেকবক্সে টিক দিয়েছেন, হুবহু সেটাই সক্রিয় হবে
+        function applyUserPermissions(userObj) {
+            const p = userObj.permissions || {};
+            const isSuperAdmin = userObj.role === 'Super Admin';
 
-            const canUpload = isSuperAdmin || p.cpscl_excel_upload || p.can_upload_excel;
-            const canEntry = isSuperAdmin || p.cpscl_manual_entry || p.can_manual_entry;
-            const canDelete = isSuperAdmin || p.cpscl_delete_data || p.can_delete_data;
+            const canUpload = isSuperAdmin || p.cpscl_excel_upload;
+            const canEntry = isSuperAdmin || p.cpscl_manual_entry;
+            const canDelete = isSuperAdmin || p.cpscl_delete_data;
 
+            // এক্সেল আপলোড বক্স কন্ট্রোল
             const excelBox = document.getElementById('excel-upload-container');
             if (excelBox) excelBox.style.display = canUpload ? 'block' : 'none';
 
+            // সাইডবারে Student Entry মেনু কন্ট্রোল
             const entryMenu = document.getElementById('menu-cpscl-entry');
             if (entryMenu) entryMenu.style.display = canEntry ? 'flex' : 'none';
 
+            // ক্লিয়ার ডাটা বাটন কন্ট্রোল
             const clearBtn = document.getElementById('btn-clear-all');
             if (clearBtn) clearBtn.style.display = canDelete ? 'inline-flex' : 'none';
         }
 
-        // ================= ৪. লগইন ও সেশন হ্যান্ডলার =================
-        function handleUserLogin(event) {
+        // ================= ৩. ফায়ারবেস সুরক্ষিত লগইন হ্যান্ডলার =================
+        async function handleUserLogin(event) {
             event.preventDefault();
-            const usernameInp = document.getElementById('auth-username').value.trim().toLowerCase();
+            const usernameInp = document.getElementById('auth-username').value.trim();
             const passwordInp = document.getElementById('auth-password').value.trim();
             const errBox = document.getElementById('login-error');
             const errText = document.getElementById('login-error-text');
+            const submitBtn = document.getElementById('btn-login-submit');
 
             errBox.classList.add('hidden');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> <span>Verifying with Firebase...</span>`;
 
-            if (!systemUsersList || systemUsersList.length === 0) {
-                systemUsersList = DEFAULT_FALLBACK_USERS;
+            // যদি ইউজারনেমে @ না থাকে, তবে স্বয়ংক্রিয়ভাবে cpscl@gmail.com দিয়ে লগইন করবে
+            let emailToAuth = usernameInp;
+            if (!emailToAuth.includes('@')) {
+                emailToAuth = 'cpscl@gmail.com';
             }
 
-            let validUser = systemUsersList.find(u => 
-                (u.name.toLowerCase() === usernameInp || (u.email && u.email.toLowerCase() === usernameInp)) && 
-                u.password === passwordInp
-            );
+            try {
+                const { signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+                await signInWithEmailAndPassword(authInstance, emailToAuth, passwordInp);
+                
+                // সফল লগইন হলে ফায়ারবেস অটোমেটিক দরজা খুলে দেবে
+                switchCPSCLSubSection('dashboard');
 
-            if (!validUser && (usernameInp === 'cpscl' || usernameInp === 'admin') && (passwordInp === 'cpscl' || passwordInp === '123456' || passwordInp === 'admin')) {
-                validUser = DEFAULT_FALLBACK_USERS[0];
-            }
-
-            if (!validUser) {
-                errText.innerText = "Invalid username or password! Contact system administrator.";
+            } catch (error) {
+                console.error("Login Error:", error);
+                errText.innerText = "Invalid Password or Username! Please check your credentials.";
                 errBox.classList.remove('hidden');
-                return;
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `<i class="fa-solid fa-arrow-right-to-bracket"></i> <span>Login to Portal</span>`;
             }
-
-            if (validUser.status !== 'Active') {
-                errText.innerText = "Your account is currently BLOCKED by administrator!";
-                errBox.classList.remove('hidden');
-                return;
-            }
-
-            loggedInSessionUser = validUser;
-            localStorage.setItem('cpscl_auth_session', JSON.stringify(validUser));
-            
-            loginModal.classList.add('hidden');
-            loginModal.classList.remove('flex');
-
-            switchCPSCLSubSection('dashboard');
-            syncProfileDisplay();
-            applyUserPermissions();
-            fetchStudentsDirectFromCloud();
-            logCloudAudit("USER_LOGIN", `User logged in to CPSCL Portal (${validUser.name})`);
         }
 
-        function handleUserLogout(customMsg) {
-            if (loggedInSessionUser) {
-                logCloudAudit("USER_LOGOUT", `User logged out (${loggedInSessionUser.name})`);
+        async function handleUserLogout() {
+            if (authInstance) {
+                const { signOut } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+                await signOut(authInstance);
             }
-            loggedInSessionUser = null;
-            localStorage.removeItem('cpscl_auth_session');
-            
-            loginModal.classList.remove('hidden');
-            loginModal.classList.add('flex');
-
-            document.getElementById('auth-username').value = '';
-            document.getElementById('auth-password').value = '';
-
-            const errBox = document.getElementById('login-error');
-            const errText = document.getElementById('login-error-text');
-            if (customMsg) {
-                errText.innerText = customMsg;
-                errBox.classList.remove('hidden');
-            } else {
-                errBox.classList.add('hidden');
-            }
+            window.location.reload();
         }
 
         function switchCPSCLSubSection(sectionType) {
@@ -1132,7 +1018,6 @@
                 document.getElementById('cpscl-list-view').classList.remove('hidden');
                 document.getElementById('menu-cpscl-list').classList.add('bg-emerald-50', 'text-emerald-700', 'dark:bg-emerald-950/40', 'dark:text-emerald-300');
                 document.getElementById('top-title').innerText = "CPSCL - STUDENT LIST";
-                applyUserPermissions();
                 renderStudentTable();
             } else if (sectionType === 'entry') {
                 document.getElementById('cpscl-entry-view').classList.remove('hidden');
@@ -1142,7 +1027,6 @@
                 document.getElementById('cpscl-profile-view').classList.remove('hidden');
                 document.getElementById('menu-cpscl-profile').classList.add('bg-emerald-50', 'text-emerald-700', 'dark:bg-emerald-950/40', 'dark:text-emerald-300');
                 document.getElementById('top-title').innerText = "EMPLOYEE PROFILE UPDATE";
-                syncProfileDisplay();
             } else if (sectionType === 'preview') {
                 updateCertificateData();
                 document.getElementById('cpscl-preview-view').classList.remove('hidden');
@@ -1227,9 +1111,7 @@
                         else studentDatabase.push(st);
                     });
 
-                    await syncToFirebase(studentDatabase);
-                    renderStudentTable();
-                    logCloudAudit("EXCEL_IMPORT", `${newStudents.length} Students imported from Excel`);
+                    await dbSetFunc(dbRefFunc(dbInstance, 'cpscl/students'), studentDatabase);
                     alert(`Successfully imported ${newStudents.length} students to Cloud!`);
                     event.target.value = '';
                 } catch (err) {
@@ -1359,9 +1241,6 @@
         }
 
         function printCPSCLCertificate() {
-            const studentName = document.getElementById('prevName').innerText;
-            const roll = document.getElementById('prevRoll').innerText;
-            logCloudAudit("CERTIFICATE_PRINT", `Printed certificate for ${studentName} (Roll: ${roll})`);
             window.print();
         }
 
@@ -1395,9 +1274,7 @@
                     ? [] 
                     : studentDatabase.filter(s => s.template !== currentFilterTemplate);
 
-                await syncToFirebase(studentDatabase);
-                renderStudentTable();
-                logCloudAudit("DATABASE_CLEAR", `Student records cleared`);
+                await dbSetFunc(dbRefFunc(dbInstance, 'cpscl/students'), studentDatabase);
                 alert("Database cleared successfully!");
             }
         }
@@ -1425,8 +1302,7 @@
             if (existingIdx !== -1) studentDatabase[existingIdx] = studentObj;
             else studentDatabase.unshift(studentObj);
 
-            await syncToFirebase(studentDatabase);
-            logCloudAudit("STUDENT_SAVE", `Saved record for ${studentObj.name} (Roll: ${studentObj.roll})`);
+            await dbSetFunc(dbRefFunc(dbInstance, 'cpscl/students'), studentDatabase);
             switchCPSCLSubSection('preview');
         }
 
@@ -1437,46 +1313,65 @@
             reader.onload = function(e) {
                 const base64 = e.target.result;
                 document.getElementById('edit-avatar-preview').src = base64;
-                if (loggedInSessionUser) {
-                    loggedInSessionUser.avatarUrl = base64;
-                }
             };
             reader.readAsDataURL(file);
         }
 
         async function saveUserProfile(event) {
             event.preventDefault();
-            if (!loggedInSessionUser) return;
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...`;
+            }
 
-            loggedInSessionUser.empId = document.getElementById('profEmpId').value.trim();
-            loggedInSessionUser.nameEn = document.getElementById('profNameEn').value.trim();
-            loggedInSessionUser.name = document.getElementById('profNameEn').value.trim();
-            loggedInSessionUser.nameBn = document.getElementById('profNameBn').value.trim();
-            loggedInSessionUser.designation = document.getElementById('profDesignation').value.trim();
-            loggedInSessionUser.role = document.getElementById('profDesignation').value.trim();
-            loggedInSessionUser.mobile = document.getElementById('profMobile').value.trim();
-            loggedInSessionUser.avatarUrl = document.getElementById('edit-avatar-preview').src;
+            const updatedData = {
+                empId: document.getElementById('profEmpId').value.trim(),
+                nameEn: document.getElementById('profNameEn').value.trim(),
+                name: document.getElementById('profNameEn').value.trim(),
+                nameBn: document.getElementById('profNameBn').value.trim(),
+                designation: document.getElementById('profDesignation').value.trim(),
+                role: document.getElementById('profDesignation').value.trim(),
+                mobile: document.getElementById('profMobile').value.trim(),
+                avatarUrl: document.getElementById('edit-avatar-preview').src
+            };
 
-            localStorage.setItem('cpscl_auth_session', JSON.stringify(loggedInSessionUser));
-            syncProfileDisplay();
+            try {
+                if (dbInstance && authInstance && authInstance.currentUser) {
+                    const { get } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
+                    const usersRef = dbRefFunc(dbInstance, 'system/users');
+                    const snapshot = await get(usersRef);
+                    let usersList = snapshot.val() || [];
+                    if (!Array.isArray(usersList)) usersList = Object.values(usersList);
 
-            const idx = systemUsersList.findIndex(u => u.id === loggedInSessionUser.id || (u.email && u.email === loggedInSessionUser.email));
-            if (idx !== -1) {
-                systemUsersList[idx] = { ...systemUsersList[idx], ...loggedInSessionUser };
-                if (dbInstance && dbSetFunc && dbRefFunc) {
-                    try {
-                        const usersRef = dbRefFunc(dbInstance, 'system/users');
-                        await dbSetFunc(usersRef, systemUsersList);
-                    } catch(e) {}
+                    const idx = usersList.findIndex(u => 
+                        (u.email && u.email.toLowerCase() === authInstance.currentUser.email.toLowerCase()) || 
+                        u.name.toLowerCase() === 'cpscl' || 
+                        u.empId === '1013'
+                    );
+
+                    if (idx !== -1) {
+                        usersList[idx] = { ...usersList[idx], ...updatedData };
+                        await dbSetFunc(usersRef, usersList);
+                    }
+                }
+
+                syncProfileDisplay(updatedData);
+
+                const alertBox = document.getElementById('prof-save-alert');
+                if (alertBox) {
+                    alertBox.classList.remove('hidden');
+                    setTimeout(() => alertBox.classList.add('hidden'), 3500);
+                }
+            } catch (err) {
+                console.error("Profile Save Error:", err);
+                alert("Failed to save profile: " + err.message);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk mr-1"></i> Save Changes`;
                 }
             }
-
-            const alertBox = document.getElementById('prof-save-alert');
-            if (alertBox) {
-                alertBox.classList.remove('hidden');
-                setTimeout(() => alertBox.classList.add('hidden'), 3500);
-            }
-            logCloudAudit("PROFILE_UPDATE", `User updated profile information (${loggedInSessionUser.name})`);
         }
 
         function openChangePasswordModal() {
@@ -1502,43 +1397,17 @@
                 return;
             }
 
-            if (loggedInSessionUser) {
-                loggedInSessionUser.password = p1;
-                localStorage.setItem('cpscl_auth_session', JSON.stringify(loggedInSessionUser));
-
-                const idx = systemUsersList.findIndex(u => u.id === loggedInSessionUser.id || (u.email && u.email === loggedInSessionUser.email));
-                if (idx !== -1) {
-                    systemUsersList[idx].password = p1;
-                    if (dbInstance && dbSetFunc && dbRefFunc) {
-                        try {
-                            const usersRef = dbRefFunc(dbInstance, 'system/users');
-                            await dbSetFunc(usersRef, systemUsersList);
-                        } catch(e) {}
-                    }
-                }
+            if (authInstance && authInstance.currentUser) {
+                const { updatePassword } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js");
+                await updatePassword(authInstance.currentUser, p1);
             }
 
             closeChangePasswordModal();
-            logCloudAudit("PASSWORD_CHANGE", `Password updated for user (${loggedInSessionUser.name})`);
             alert("Password updated successfully!");
         }
 
-        // ================= INSTANT AUTH & INITIALIZATION =================
-        function checkAuthInstantly() {
-            if (loggedInSessionUser) {
-                loginModal.classList.add('hidden');
-                loginModal.classList.remove('flex');
-                switchCPSCLSubSection('dashboard');
-                syncProfileDisplay();
-                applyUserPermissions();
-            } else {
-                loginModal.classList.remove('hidden');
-                loginModal.classList.add('flex');
-            }
-        }
-
+        // ================= অ্যাপ শুরু =================
         document.addEventListener('DOMContentLoaded', () => {
-            checkAuthInstantly();
             initFirebaseSync();
         });
     </script>
